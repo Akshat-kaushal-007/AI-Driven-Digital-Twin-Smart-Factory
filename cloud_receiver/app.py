@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import os
 import requests
 
+from ai_worker import start_ai_worker
+
 app = Flask(__name__)
 
 INFLUX_URL = os.getenv("INFLUX_URL")
