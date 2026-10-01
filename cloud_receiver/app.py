@@ -95,7 +95,7 @@ def mqtt():
         return jsonify({"error": str(e)}), 500
 
     return jsonify({"status": "received"}), 200
-
+print("STARTING AI WORKER FROM APP")
 start_ai_worker()
 
 if __name__ == "__main__":
