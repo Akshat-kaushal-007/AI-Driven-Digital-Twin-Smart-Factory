@@ -1,5 +1,3 @@
-print("AI_WORKER FILE LOADED")
-
 from flask import Flask, request, jsonify
 import os
 import requests
