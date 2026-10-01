@@ -303,6 +303,7 @@ def ai_loop():
 # Start worker
 # =========================
 
+print("STARTING AI WORKER FROM APP")
 def start_ai_worker():
 
     print("STARTING AI WORKER NOW")
