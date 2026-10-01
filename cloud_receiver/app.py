@@ -20,9 +20,54 @@ def mqtt():
     if not data:
         return jsonify({"error": "No JSON data received"}), 400
 
-    print("Received from EMQX:", data)
+    topic = data.get("topic", "")
+    payload = data.get("payload", "")
+
+    print("Received from EMQX:", topic, payload)
+
+    field_map = {
+        "temperature": "temperature",
+        "pressure": "pressure",
+        "motor_speed": "motor_speed",
+        "vibration": "vibration",
+        "current": "current",
+        "voltage": "voltage",
+        "humidity": "humidity"
+    }
+
+    for key, field in field_map.items():
+        if key in topic:
+            try:
+                value = float(payload)
+
+                line = (
+                    f"factory_esp32,machine=machine1,source=ESP32 "
+                    f"{field}={value}"
+                )
+
+                response = requests.post(
+                    f"{INFLUX_URL}/api/v2/write",
+                    params={
+                        "org": INFLUX_ORG,
+                        "bucket": INFLUX_BUCKET,
+                        "precision": "s"
+                    },
+                    headers={
+                        "Authorization": f"Token {INFLUX_TOKEN}",
+                        "Content-Type": "text/plain; charset=utf-8"
+                    },
+                    data=line
+                )
+
+                print("InfluxDB:", response.status_code)
+
+            except ValueError:
+                print("Invalid numeric payload:", payload)
+
+            break
 
     return jsonify({"status": "received"}), 200
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
