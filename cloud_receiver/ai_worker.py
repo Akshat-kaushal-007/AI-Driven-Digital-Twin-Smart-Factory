@@ -1,3 +1,5 @@
+print("AI_WORKER FILE LOADED")
+
 import os
 import time
 import threading
