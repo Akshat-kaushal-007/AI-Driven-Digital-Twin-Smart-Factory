@@ -4,7 +4,6 @@ import requests
 
 app = Flask(__name__)
 
-# InfluxDB Cloud settings from Render Environment Variables
 INFLUX_URL = os.getenv("INFLUX_URL")
 INFLUX_TOKEN = os.getenv("INFLUX_TOKEN")
 INFLUX_ORG = os.getenv("INFLUX_ORG")
@@ -20,13 +19,18 @@ def home():
 def mqtt():
     data = request.get_json(silent=True)
 
+    print("STEP 1 - Request received")
+    print("RAW DATA:", data)
+
     if not data:
+        print("STEP 2 - No JSON data")
         return jsonify({"error": "No JSON data received"}), 400
 
-    topic = data.get("topic", "")
+    topic = str(data.get("topic", ""))
     payload = data.get("payload", "")
 
-    print("Received from EMQX:", topic, "payload", payload)
+    print("STEP 2 - Topic:", topic)
+    print("STEP 3 - Payload:", payload)
 
     field_map = {
         "temperature": "temperature",
@@ -38,43 +42,55 @@ def mqtt():
         "humidity": "humidity"
     }
 
+    matched_field = None
+
     for key, field in field_map.items():
-
         if key in topic:
-
-            try:
-                # Remove single or double quotes from MQTT payload
-                value = float(str(payload).strip("'\""))
-
-                # InfluxDB Line Protocol
-                line = (
-                    f"factory_esp32,machine=machine1,source=ESP32 "
-                    f"{field}={value}"
-                )
-
-                response = requests.post(
-                    f"{INFLUX_URL}/api/v2/write",
-                    params={
-                        "org": INFLUX_ORG,
-                        "bucket": INFLUX_BUCKET,
-                        "precision": "s"
-                    },
-                    headers={
-                        "Authorization": f"Token {INFLUX_TOKEN}",
-                        "Content-Type": "text/plain; charset=utf-8"
-                    },
-                    data=line
-                )
-
-                print("InfluxDB:", response.status_code)
-
-                if response.status_code != 204:
-                    print("InfluxDB error:", response.text)
-
-            except ValueError:
-                print("Invalid numeric payload:", payload)
-
+            matched_field = field
             break
+
+    print("STEP 4 - Matched field:", matched_field)
+
+    if matched_field is None:
+        print("ERROR - No matching topic field")
+        return jsonify({"error": "Unknown topic"}), 400
+
+    try:
+        value = float(str(payload).strip("'\""))
+        print("STEP 5 - Numeric value:", value)
+    except ValueError:
+        print("ERROR - Cannot convert payload to number:", payload)
+        return jsonify({"error": "Invalid numeric payload"}), 400
+
+    line = (
+        f"factory_esp32,machine=machine1,source=ESP32 "
+        f"{matched_field}={value}"
+    )
+
+    print("STEP 6 - InfluxDB line:", line)
+
+    try:
+        response = requests.post(
+            f"{INFLUX_URL}/api/v2/write",
+            params={
+                "org": INFLUX_ORG,
+                "bucket": INFLUX_BUCKET,
+                "precision": "s"
+            },
+            headers={
+                "Authorization": f"Token {INFLUX_TOKEN}",
+                "Content-Type": "text/plain; charset=utf-8"
+            },
+            data=line,
+            timeout=10
+        )
+
+        print("STEP 7 - InfluxDB status:", response.status_code)
+        print("STEP 8 - InfluxDB response:", response.text)
+
+    except Exception as e:
+        print("ERROR - InfluxDB request failed:", str(e))
+        return jsonify({"error": str(e)}), 500
 
     return jsonify({"status": "received"}), 200
 
