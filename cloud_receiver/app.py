@@ -96,6 +96,7 @@ def mqtt():
 
     return jsonify({"status": "received"}), 200
 
+start_ai_worker()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
