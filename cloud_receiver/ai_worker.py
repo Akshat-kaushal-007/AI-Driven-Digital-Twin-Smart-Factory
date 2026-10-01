@@ -305,6 +305,8 @@ def ai_loop():
 
 def start_ai_worker():
 
+    print("STARTING AI WORKER NOW")
+
     worker_thread = threading.Thread(
         target=ai_loop,
         daemon=True
